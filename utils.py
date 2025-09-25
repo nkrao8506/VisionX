@@ -54,3 +54,15 @@ def score_table(exercise, counter, status):
     cv2.putText(score_table, "Status : " + str(status), (10, 135),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.7, (182, 158, 128), 2, cv2.LINE_AA)
     cv2.imshow("Score Table", score_table)
+
+def generate_movement_description(body_part_analysis, rep_count, exercise_type):
+    """
+    Creates a textual summary based on form/angle analysis and rep count for feedback.
+    body_part_analysis: dict containing at least 'form_issue' (str or None)
+    """
+    summary = f"{exercise_type}: User performed {rep_count} repetitions. "
+    if body_part_analysis.get('form_issue'):
+        summary += f"Form issue observed: {body_part_analysis['form_issue']}."
+    else:
+        summary += "Form generally good."
+    return summary
