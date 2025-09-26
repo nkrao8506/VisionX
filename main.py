@@ -44,7 +44,7 @@ cap.set(3, 800)  # width
 cap.set(4, 480)  # height
 
 user_id = "test_user_123"  # Get from your authentication system
-registered_photo = r"C:\Users\nanin\OneDrive\Pictures\Camera Roll\WIN_20250926_11_56_12_Pro.jpg"
+registered_photo = r"C:\Users\nanin\OneDrive\Pictures\Camera Roll\WIN_20250926_11_56_12_Pro.jpg"  #UPDATE THE PATH TO A PHOTO ON YOUR SYSTEM
 
 # Initialize systems
 cheat_detector = ComprehensiveCheatDetector(user_id, registered_photo)
