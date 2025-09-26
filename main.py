@@ -8,6 +8,9 @@ from utils import *
 from body_part_angle import BodyPartAngle
 from types_of_exercise import TypeOfExercise
 from feedback_engine import FeedbackAnalyzer
+from cheat_detection_system import ComprehensiveCheatDetector
+from cheat_messages import EnhancedCheatMessages
+# from user_registration import UserRegistration
 
 
 ## setup argparse
@@ -40,6 +43,13 @@ else:
 cap.set(3, 800)  # width
 cap.set(4, 480)  # height
 
+user_id = "test_user_123"  # Get from your authentication system
+registered_photo = r"C:\Users\nanin\OneDrive\Pictures\Camera Roll\WIN_20250926_11_56_12_Pro.jpg"
+
+# Initialize systems
+cheat_detector = ComprehensiveCheatDetector(user_id, registered_photo)
+message_handler = EnhancedCheatMessages()
+
 ## setup mediapipe pose detector
 with mp_pose.Pose(min_detection_confidence=0.5,
                   min_tracking_confidence=0.5) as pose:
@@ -65,29 +75,47 @@ with mp_pose.Pose(min_detection_confidence=0.5,
                 landmarks = results.pose_landmarks.landmark
                 counter, status = TypeOfExercise(landmarks).calculate_exercise(
                     args["exercise_type"], counter, status)
+                
+                            # CHEAT DETECTION INTEGRATION
+                detection_results = cheat_detector.process_frame(frame)
 
-                # -- FEEDBACK SYSTEM INTEGRATION START --
-                # Select relevant rep angle for each exercise
-                if args["exercise_type"] == "sit-up":
-                    angle = BodyPartAngle(landmarks).angle_of_the_abdomen()
-                elif args["exercise_type"] == "push-up":
-                    angle = BodyPartAngle(landmarks).angle_of_the_left_arm()
-                elif args["exercise_type"] == "pull-up":
-                    angle = BodyPartAngle(landmarks).angle_of_the_left_arm()  # or right arm if preferred
-                elif args["exercise_type"] == "squat":
-                    angle = BodyPartAngle(landmarks).angle_of_the_left_leg()
-                elif args["exercise_type"] == "vertical jump":
-                    angle = BodyPartAngle(landmarks).angle_of_the_left_leg()
-                elif args["exercise_type"] == "run":
-                    angle = BodyPartAngle(landmarks).angle_of_the_left_leg()  # Ideally stride info; adjust as needed
-                else:
-                    angle = BodyPartAngle(landmarks).angle_of_the_abdomen()
+                if not detection_results['session_active']:
+                    # Session blocked
+                    block_message = message_handler.get_blocked_message()
+                    cv2.putText(frame, block_message, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+                    print(f"🚫 {block_message}")
+                    break
+                
+                # Display appropriate messages
+                if detection_results['violations'] or detection_results['warnings']:
+                    message = message_handler.format_comprehensive_message(detection_results)
+                    cv2.putText(frame, message, (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.5, detection_results['overlay_color'], 2)
+                    print(f"⚠️ {message}")
 
-                feedback = analyzer.analyze_rep_performance(angle, status, counter)
-                print(f"Coach feedback: {feedback}")
 
-                cv2.putText(frame, f"{feedback}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2, cv2.LINE_AA)
-                # -- FEEDBACK SYSTEM INTEGRATION END --
+                if detection_results['face_verified']:
+                    # -- FEEDBACK SYSTEM INTEGRATION START --
+                    # Select relevant rep angle for each exercise
+                    if args["exercise_type"] == "sit-up":
+                        angle = BodyPartAngle(landmarks).angle_of_the_abdomen()
+                    elif args["exercise_type"] == "push-up":
+                        angle = BodyPartAngle(landmarks).angle_of_the_left_arm()
+                    elif args["exercise_type"] == "pull-up":
+                        angle = BodyPartAngle(landmarks).angle_of_the_left_arm()  # or right arm if preferred
+                    elif args["exercise_type"] == "squat":
+                        angle = BodyPartAngle(landmarks).angle_of_the_left_leg()
+                    elif args["exercise_type"] == "vertical jump":
+                        angle = BodyPartAngle(landmarks).angle_of_the_left_leg()
+                    elif args["exercise_type"] == "run":
+                        angle = BodyPartAngle(landmarks).angle_of_the_left_leg()  # Ideally stride info; adjust as needed
+                    else:
+                        angle = BodyPartAngle(landmarks).angle_of_the_abdomen()
+
+                    feedback = analyzer.analyze_rep_performance(angle, status, counter)
+                    print(f"Coach feedback: {feedback}")
+
+                    cv2.putText(frame, f"{feedback}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2, cv2.LINE_AA)
+                    # -- FEEDBACK SYSTEM INTEGRATION END --
 
             score_table(args["exercise_type"], counter, status)
             
